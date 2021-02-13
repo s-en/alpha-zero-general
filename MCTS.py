@@ -94,6 +94,13 @@ class MCTS():
                 # NB! All valid moves may be masked if either your NNet architecture is insufficient or you've get overfitting or something else.
                 # If you have got dozens or hundreds of these messages you should pay attention to your NNet and/or training process.   
                 log.error("All valid moves were masked, doing a workaround.")
+                print(s)
+                print(sum_Ps_s)
+                print(self.Ps[s])
+                print(valids)
+                print(self.Es[s])
+                print(self.game.getGameEnded(canonicalBoard, 1))
+                print(self.game.getValidMoves(canonicalBoard, -1))
                 self.Ps[s] = self.Ps[s] + valids
                 self.Ps[s] /= np.sum(self.Ps[s])
 
@@ -119,8 +126,21 @@ class MCTS():
                     best_act = a
 
         a = best_act
+        #self.game.display(canonicalBoard)
+        #print(canonicalBoard.step)
+        #print(canonicalBoard.passCnt)
+        #if a == 4:
+            #print(s)
+            #print(valids)
         next_s, next_player = self.game.getNextState(canonicalBoard, 1, a)
         next_s = self.game.getCanonicalForm(next_s, next_player)
+
+        if canonicalBoard.step > 60:
+            print(canonicalBoard.step)
+            print(next_player)
+            self.game.display(canonicalBoard)
+            print(valids)
+            print(a)
 
         v = self.search(next_s)
 
