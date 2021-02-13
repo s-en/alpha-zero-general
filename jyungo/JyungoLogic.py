@@ -14,7 +14,7 @@ class Board():
         for i in range(self.n):
             self.stones[i] = [0]*self.n
         self.prev_stones = np.array(self.stones)
-        self.histories = []
+        self.histories = np.array([self.stones])
         self.passCnt = 0
         self.step = 0
         self.last_move = None
@@ -27,7 +27,7 @@ class Board():
       b = Board(self.n)
       b.stones = np.copy(self.stones)
       b.prev_stones = np.copy(self.prev_stones)
-      b.histories = copy.deepcopy(self.histories)
+      b.histories = self.histories.copy()
       b.passCnt = self.passCnt
       b.step = self.step
       b.last_move = self.last_move
@@ -62,11 +62,8 @@ class Board():
                     # check kou
                     check_board.stones = np.copy(self.stones)
                     check_board.execute_move((x, y), color)
-                    #kou = np.array_equal(check_board.stones, self.prev_stones)
-                    hist = next(filter(lambda h: np.array_equal(check_board.stones, h), self.histories), None)
-                    kou = True
-                    if hist is None:
-                        kou = False
+                    hist = len(np.where((self.histories == check_board.stones).all(axis=1).all(axis=1))[0])
+                    kou = hist > 0
                     suicide = check_board[x][y] == 0
                     check_board.stones = np.copy(self.stones)
                     check_board.execute_move((x, y), -color)
@@ -83,7 +80,8 @@ class Board():
         """Perform the given move on the board
         """
         self.prev_stones = np.copy(self.stones)
-        self.histories.append(self.prev_stones)
+        #self.histories.append(self.prev_stones)
+        self.histories = np.append(self.histories, [self.prev_stones], axis=0)
         (x,y) = move
         self.last_move = move
         if self[x][y] != 0:

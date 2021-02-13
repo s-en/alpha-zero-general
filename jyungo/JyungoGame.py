@@ -102,15 +102,11 @@ class JyungoGame(Game):
         return l
 
     def stringRepresentation(self, board):
-        b = board.getCopy()
-        #if b.last_move != None:
-        #    (x, y) = b.last_move
-        #    b.stones[x][y] *= 2 # flag last move
-        #conc = np.concatenate([board.stones.reshape([-1]), board.prev_stones.reshape([-1]), np.array([board.passCnt])])
-        #return np.array2string(conc, precision=1, separator=',', suppress_small=True)
-        hs1 = hashlib.md5(str(board.stones).encode()).hexdigest()
-        hs2 = hashlib.md5(str(board.histories).encode()).hexdigest()
-        return hs1 + hs2 + str(board.passCnt)
+        s1 = board.stones.tostring()
+        s2 = board.histories.tostring()
+        #hs1 = hashlib.md5(str(board.stones).encode()).hexdigest()
+        #hs2 = hashlib.md5(str(board.histories).encode()).hexdigest()
+        return s1 + s2 + bytes(board.passCnt)
 
     def stringRepresentationReadable(self, board):
         board_s = "".join(self.square_content[square] for row in board for square in row)

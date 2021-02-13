@@ -135,7 +135,7 @@ class MCTS():
         next_s, next_player = self.game.getNextState(canonicalBoard, 1, a)
         next_s = self.game.getCanonicalForm(next_s, next_player)
 
-        if canonicalBoard.step > 60:
+        if canonicalBoard.step > 300:
             print(canonicalBoard.step)
             print(next_player)
             self.game.display(canonicalBoard)
