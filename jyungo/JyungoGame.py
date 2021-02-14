@@ -49,8 +49,7 @@ class JyungoGame(Game):
         # return a fixed size binary vector
         valids = [0]*self.getActionSize()
         valids[-1] = 1 # pass
-        b = board.getCopy()
-        legalMoves = b.get_legal_moves(player)
+        legalMoves = board.get_legal_moves(player)
         #if board.step < board.n ** 2:
             #legalMoves = b.get_legal_moves(player)
             #valids[-1] = 1 # pass
@@ -61,13 +60,12 @@ class JyungoGame(Game):
     def getGameEnded(self, board, player):
         # return 0 if not ended, 1 if player 1 won, -1 if player 1 lost
         # player = 1
-        b = board.getCopy()
-        if b.passCnt < 2:
-            if b.has_legal_moves(player):
+        if board.passCnt < 2:
+            if board.has_legal_moves(player):
                 return 0
-            if b.has_legal_moves(-player):
+            if board.has_legal_moves(-player):
                 return 0
-        if b.countDiff(player) > 0:
+        if board.countDiff(player) > 0:
             return 1
         return -1
 
@@ -83,16 +81,15 @@ class JyungoGame(Game):
         assert(len(pi) == self.n**2+1)  # 1 for pass
         pi_board = np.reshape(pi[:-1], (self.n, self.n))
         l = []
-        b = board.getCopy()
-        if b.last_move != None:
-            (x, y) = b.last_move
-            b.stones[x][y] *= 2 # flag last move
+        #if b.last_move != None:
+        #    (x, y) = b.last_move
+        #    b.stones[x][y] *= 2 # flag last move
         for i in range(1, 5):
             for j in [True, False]:
                 #newB = board.getCopy()
                 #newB.stones = np.rot90(newB.stones, i)
 
-                newB = np.rot90(b.stones, i)
+                newB = np.rot90(board.regular_stones(), i)
                 newPi = np.rot90(pi_board, i)
                 if j:
                     newB = np.fliplr(newB)
@@ -101,9 +98,6 @@ class JyungoGame(Game):
         return l
 
     def stringRepresentation(self, board):
-        #s1 = board.stones.tostring()
-        #s2 = board.histories.tostring()
-        #return s1 + s2 + bytes(board.passCnt)
         return board.hash_kifu
 
     def stringRepresentationReadable(self, board):
@@ -111,8 +105,7 @@ class JyungoGame(Game):
         return board_s
 
     def getScore(self, board, player):
-        b = board.getCopy()
-        return b.countDiff(player)
+        return board.countDiff(player)
 
     @staticmethod
     def display(board):
