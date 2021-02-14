@@ -37,10 +37,10 @@ class JyungoGame(Game):
         # if player takes action on board, return next (board,player)
         # action must be a valid move
         b = board.getCopy()
-        if action == self.n*self.n: # pass
-            b.passCnt += 1
-            return (b, -player)
-        b.passCnt = 0
+        #if action == self.n*self.n: # pass
+        #    b.passCnt += 1
+        #    return (b, -player)
+        #b.passCnt = 0
         move = (int(action/self.n), action%self.n)
         b.execute_move(move, player)
         return (b, -player)
@@ -75,7 +75,6 @@ class JyungoGame(Game):
         # return state if player==1, else return -state if player==-1
         b = board.getCopy()
         b.stones = b.stones * player
-        b.prev_stones = b.prev_stones * player
         return b
 
     def getSymmetries(self, board, pi):
@@ -102,11 +101,10 @@ class JyungoGame(Game):
         return l
 
     def stringRepresentation(self, board):
-        s1 = board.stones.tostring()
-        s2 = board.histories.tostring()
-        #hs1 = hashlib.md5(str(board.stones).encode()).hexdigest()
-        #hs2 = hashlib.md5(str(board.histories).encode()).hexdigest()
-        return s1 + s2 + bytes(board.passCnt)
+        #s1 = board.stones.tostring()
+        #s2 = board.histories.tostring()
+        #return s1 + s2 + bytes(board.passCnt)
+        return board.hash_kifu
 
     def stringRepresentationReadable(self, board):
         board_s = "".join(self.square_content[square] for row in board for square in row)
@@ -121,6 +119,9 @@ class JyungoGame(Game):
         n = len(board[0])
         print(board.get_legal_moves(1))
         print(board.get_legal_moves(-1))
+        print(board.hash_kifu)
+        #print(board.hash)
+        #print(board.histories)
         print("   ", end="")
         for y in range(n):
             print(y, end=" ")

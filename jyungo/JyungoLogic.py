@@ -1,6 +1,13 @@
 import numpy as np
-import copy
+import hashlib
 
+HASH_BOARD = {}
+def bitwise_xor_bytes(a, b):
+    result_int = int.from_bytes(a, byteorder="big") ^ int.from_bytes(b, byteorder="big")
+    return result_int.to_bytes(max(len(a), len(b)), byteorder="big")
+
+HASH_INIT = hashlib.sha256('init'.encode()).digest()
+HASH_KIFU = hashlib.sha256('kifu'.encode()).digest()
 class Board():
 
     __directions = [(1,0),(-1,0),(0,1),(0,-1)]
@@ -9,15 +16,29 @@ class Board():
         "Set up initial board configuration."
 
         self.n = n
+        if not n in HASH_BOARD:
+            HASH_BOARD[n] = [[], []]
+            for p in range(2):
+                HASH_BOARD[n][p] = [0]*(self.n*self.n+1)
+                HASH_BOARD[n][p][-1] = hashlib.sha256(f'pass{p}'.encode()).digest()
+                cnt = 0
+                for x in range(self.n):
+                    for y in range(self.n):
+                        addr = str(x) + str(y)
+                        hashv = hashlib.sha256(addr.encode()).digest()
+                        HASH_BOARD[n][p][cnt] = hashv
+                        cnt += 1
         # Create the empty board array.
         self.stones = [None]*self.n
         for i in range(self.n):
             self.stones[i] = [0]*self.n
-        self.prev_stones = np.array(self.stones)
-        self.histories = np.array([self.stones])
+        self.histories = {}
         self.passCnt = 0
         self.step = 0
         self.last_move = None
+        self.hash = HASH_INIT
+        self.hash_kifu = HASH_KIFU
+        self.prev_hash = self.hash
 
     # add [][] indexer syntax to the Board
     def __getitem__(self, index): 
@@ -26,11 +47,12 @@ class Board():
     def getCopy(self):
       b = Board(self.n)
       b.stones = np.copy(self.stones)
-      b.prev_stones = np.copy(self.prev_stones)
       b.histories = self.histories.copy()
       b.passCnt = self.passCnt
       b.step = self.step
       b.last_move = self.last_move
+      b.hash = self.hash
+      b.hash_kifu = self.hash_kifu
       return b
     
     def astype(self,t):
@@ -60,44 +82,54 @@ class Board():
             for x in range(self.n):
                 if self[x][y] == 0:
                     # check kou
-                    check_board.stones = np.copy(self.stones)
+                    check_board = self.getCopy()
                     check_board.execute_move((x, y), color)
-                    hist = len(np.where((self.histories == check_board.stones).all(axis=1).all(axis=1))[0])
-                    kou = hist > 0
+                    kou = check_board.hash in self.histories
                     suicide = check_board[x][y] == 0
-                    check_board.stones = np.copy(self.stones)
-                    check_board.execute_move((x, y), -color)
-                    suicide2 = check_board[x][y] == 0
-                    if not kou and not suicide and not suicide2:
+                    if not kou and not suicide:
                         moves.add((x, y))
         return list(moves)
 
     def has_legal_moves(self, color):
         moves = self.get_legal_moves(color)
         return len(moves) > 0
-
+    
     def execute_move(self, move, color):
         """Perform the given move on the board
         """
-        self.prev_stones = np.copy(self.stones)
-        #self.histories.append(self.prev_stones)
-        self.histories = np.append(self.histories, [self.prev_stones], axis=0)
         (x,y) = move
+        
+        if x >= self.n: # pass
+            self.passCnt += 1
+            self.step += 1
+            self.hash = hashlib.sha256(self.stones.tostring() + bytes(f'pass{self.passCnt}', encoding='utf-8')).digest()
+            self.hash_kifu = bitwise_xor_bytes(self.hash_kifu, self.hash)
+            self.histories[self.hash] = True
+            return
+        self.passCnt = 0
         self.last_move = move
         if self[x][y] != 0:
             print(move)
             print(self.stones)
-            print(self.prev_stones)
             print(self.get_legal_moves(color))
             print(self.get_legal_moves(-color))
         assert self[x][y] == 0
         self[x][y] = color
-        self.execute_shikatu(-color)
-        self.execute_shikatu(color)
+        check_stones = np.array(self.stones)
+        for d in self.__directions:
+            (dx, dy) = d
+            vx = x + dx
+            vy = y + dy
+            if vx < 0 or vy < 0 or vx >= self.n or vy >= self.n:
+                continue
+            self.execute_shikatu(-color, check_stones, vx, vy)
+        self.execute_shikatu(color, check_stones, x, y)
+        self.hash = hashlib.sha256(self.stones.tostring()).digest()
+        self.hash_kifu = bitwise_xor_bytes(self.hash_kifu, self.hash)
+        self.histories[self.hash] = True
         self.step += 1
     
-    def execute_shikatu(self, color):
-        check_stones = np.array(self.stones)
+    def execute_shikatu(self, color, check_stones, x, y):
         def checker(x, y):
             cnt = 0
             if check_stones[x][y] != 0:
@@ -125,11 +157,9 @@ class Board():
                 tcolor = self.stones[vx][vy]
                 if tcolor == color:
                     killer(vx, vy)
-        for y in range(self.n):
-            for x in range(self.n):
-                if check_stones[x][y] == color:
-                    kuten = checker(x, y)
-                    if kuten == 0:
-                        killer(x, y)
+        if check_stones[x][y] == color:
+            kuten = checker(x, y)
+            if kuten == 0:
+                killer(x, y)
                     
         
