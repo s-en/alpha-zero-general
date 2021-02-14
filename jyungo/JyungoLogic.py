@@ -171,8 +171,6 @@ class Board():
         checked = {}
         def checker(x, y):
             cnt = 0
-            if self.stones[x][y] != 0:
-                checked[f'{x}{y}'] = True
             for d in self.__directions:
                 (dx, dy) = d
                 vx = x + dx
@@ -181,6 +179,7 @@ class Board():
                 if tcolor == 0:
                     cnt += 1
                 elif tcolor == color and not (f'{x}{y}' in checked):
+                    checked[f'{x}{y}'] = True
                     cnt += checker(vx, vy)
             return cnt
         def killer(x, y):
