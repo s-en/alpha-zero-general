@@ -140,7 +140,7 @@ class Board():
         if x >= self.n: # pass
             self.passCnt += 1
             self.step += 1
-            self.hash = self.get_hash(self.stones.tostring() + bytes(f'pass{self.passCnt}', encoding='utf-8'))
+            self.hash = self.get_hash((self.stones+0).tostring() + bytes(f'pass{self.passCnt}', encoding='utf-8'))
             self.hash_kifu = self.get_hash_kifu()
             self.histories[self.hash] = True
             return
@@ -151,21 +151,25 @@ class Board():
             print(self.stones)
             print(self.get_legal_moves(color))
             print(self.get_legal_moves(-color))
+            print(self.hash)
+            print(self.hash_kifu)
         assert self[x][y] == 0
-        self[x][y] = color
+        assert color != 0
+        self[x][y] = color + 0
         for d in self.__directions:
             (dx, dy) = d
             vx = x + dx
             vy = y + dy
             self.execute_shikatu(-color, vx+1, vy+1)
         self.execute_shikatu(color, x+1, y+1)
-        self.hash =self.get_hash(self.stones.tostring())
+        self.hash =self.get_hash((self.stones+0).tostring())
         self.hash_kifu = self.get_hash_kifu()
         self.histories[self.hash] = True
         self.step += 1
 
     def get_hash_kifu(self):
-        return self.hash_kifu ^ self.hash
+        #return self.hash_kifu ^ self.hash
+        return self.get_hash((str(self.hash) + str(self.histories)).encode())
     
     def execute_shikatu(self, color, x, y):
         checked = {}

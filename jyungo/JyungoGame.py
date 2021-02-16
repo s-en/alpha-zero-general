@@ -72,7 +72,7 @@ class JyungoGame(Game):
     def getCanonicalForm(self, board, player):
         # return state if player==1, else return -state if player==-1
         b = board.getCopy()
-        b.stones = b.stones * player
+        b.stones = (b.stones * player) + 0
         return b
 
     def getSymmetries(self, board, pi):
@@ -92,8 +92,8 @@ class JyungoGame(Game):
                 newB = np.rot90(board.regular_stones(), i)
                 newPi = np.rot90(pi_board, i)
                 if j:
-                    newB = np.fliplr(newB)
-                    newPi = np.fliplr(newPi)
+                    newB = np.fliplr(newB) + 0
+                    newPi = np.fliplr(newPi) + 0
                 l += [(newB, list(newPi.ravel()) + [pi[-1]])]
         return l
 
@@ -113,8 +113,8 @@ class JyungoGame(Game):
         print(board.get_legal_moves(1))
         print(board.get_legal_moves(-1))
         print(board.hash_kifu)
-        #print(board.hash)
-        #print(board.histories)
+        print(board.hash)
+        print(board.histories)
         print("   ", end="")
         for y in range(n):
             print(y, end=" ")
