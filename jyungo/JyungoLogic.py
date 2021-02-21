@@ -130,6 +130,11 @@ class Board():
                 # 同一局面禁止
                 continue
             moves.add(action)
+        if len(list(filter(lambda x: x < 0, list(moves)))) > 0:
+            print('has negative number')
+            print(moves)
+            print(self.stones['1'])
+            print(self.stones['-1'])
         return list(moves)
 
     def has_legal_moves(self, color):
@@ -174,6 +179,8 @@ class Board():
         board = self.stones[me] & skip_mask
         board_opp = self.stones[you] & skip_mask
 
+        if slide - n < 0:
+            print(action)
         mask = 1 << slide + 1 | 1 << slide - 1 | 1 << slide + n | 1 << slide - n # 上下左右
         same_cnt = bin(board & ~board_opp & mask).count('1') # 周囲の同じ色の数
         opp_cnt = bin(board_opp & ~board & mask).count('1') # 周囲の相手色の数
@@ -224,3 +231,10 @@ class Board():
     
     def get_history_hash(self):
         return self.cache_hash['front']
+        # res = int.from_bytes(hashlib.sha256(str(self.pass_cnt).encode()).digest(), 'big')
+        # for h in self.history['front']:
+        #     res ^= int.from_bytes(hashlib.sha256(hex(h).encode()).digest(), 'big')
+        # return hex(res)
+        #return str(random.randint(0, 1000000000000000000000000000000000000))
+        #return str(sorted(self.history['front']))
+        
