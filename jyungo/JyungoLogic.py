@@ -1,203 +1,226 @@
 import numpy as np
 import hashlib
-from scipy import ndimage
+import re
+import random
 
-HASH_BOARD = {}
+BLACK = '1'
+WHITE = '-1'
 
-def shikatu_filter(x):
-    if x[4] != 0:
-        return -2
-    if x[1] * x[3] * x[5] * x[7] == 0:
-        return -1
-    return 0
+BANPEI = {
+    '7': 0b111111111100000001100000001100000001100000001100000001100000001100000001111111111,
+    '5': 0b1111111100000110000011000001100000110000011111111
+}
 
 HASH_INIT = int.from_bytes(hashlib.sha256('init'.encode()).digest(), 'big')
-HASH_KIFU = int.from_bytes(hashlib.sha256('kifu'.encode()).digest(), 'big')
 class Board():
-
-    __directions = [(1,0),(-1,0),(0,1),(0,-1)]
-
-    def __init__(self, n, stones=None):
+    def __init__(self, n):
         "Set up initial board configuration."
-
+        self.player = 1
         self.n = n
-        if not n in HASH_BOARD:
-            HASH_BOARD[n] = [[], []]
-            for p in range(2):
-                HASH_BOARD[n][p] = [0]*(self.n*self.n+1)
-                HASH_BOARD[n][p][-1] = int.from_bytes(hashlib.sha256(f'pass{p}'.encode()).digest(), 'big')
-                cnt = 0
-                for x in range(self.n):
-                    for y in range(self.n):
-                        addr = str(x) + str(y)
-                        hashv = int.from_bytes(hashlib.sha256(addr.encode()).digest(), 'big')
-                        HASH_BOARD[n][p][cnt] = hashv
-                        cnt += 1
-        # Create the empty board array.
-        #self.stones = [None]*self.n
-        #for i in range(self.n):
-            #self.stones[i] = [0]*self.n
-        if stones is None:
-            self.stones = np.zeros([self.n+2, self.n+2])
-        else:
-            self.stones = stones
-        self.stones[0,:] = 3
-        self.stones[-1,:] = 3
-        self.stones[:,0] = 3
-        self.stones[:,-1] = 3
-        self.histories = {}
-        self.passCnt = 0
+        self.size = n*n
+        self.padded_size = (n+2)**2
+        pad_board = BANPEI[str(self.n)]
+        self.stones = {
+            BLACK: pad_board, # black
+            WHITE: pad_board # white
+        }
+        self.groups = {
+            BLACK: {}, # black
+            WHITE: {} # white
+        }
+        self.history = {
+            'front': set(),
+            'back': set()
+        }
+        self.cache_hash = {
+            'front': HASH_INIT,
+            'back': HASH_INIT
+        }
+        self.pass_cnt = 0
         self.step = 0
-        self.last_move = None
-        self.hash = HASH_INIT
-        self.hash_kifu = HASH_KIFU
-        self.prev_hash = self.hash
 
     # add [][] indexer syntax to the Board
     def __getitem__(self, index):
-        stones = self.stones[1:-1, 1:-1]
-        return stones[index]
-
-    def getCopy(self):
-      b = Board(self.n, np.copy(self.stones))
-      b.histories = self.histories.copy()
-      b.passCnt = self.passCnt
-      b.step = self.step
-      b.last_move = self.last_move
-      b.hash = self.hash
-      b.hash_kifu = self.hash_kifu
-      return b
-    
-    def regular_stones(self):
-        return self.stones[1:-1, 1:-1]
+        black = self.has_stone(self.stones[BLACK], index)
+        white = self.has_stone(self.stones[WHITE], index)
+        return black - white
     
     def astype(self,t):
-        stones = self.stones[1:-1, 1:-1]
-        return stones.astype(t)
+        stones = []
+        for i in range(self.size):
+            stones.append(self[i])
+        return np.array(stones).astype(t)
+    
+    def has_stone(self, board, index):
+        slide = self.n + 3 + index + int(index / self.n) * 2
+        return board >> slide & 1
+
+    def getCopy(self):
+        b = Board(self.n)
+        b.player = self.player
+        b.stones = {
+            BLACK: self.stones[BLACK],
+            WHITE: self.stones[WHITE]
+        }
+        b.groups = {
+            BLACK: self.groups[BLACK].copy(),
+            WHITE: self.groups[WHITE].copy(),
+        }
+        b.history = {
+            'front': self.history['front'].copy(),
+            'back': self.history['back'].copy()
+        }
+        b.cache_hash = {
+            'front': self.cache_hash['front'],
+            'back': self.cache_hash['back']
+        }
+        b.pass_cnt = self.pass_cnt
+        b.step = self.step
+        return b
 
     def countDiff(self, color):
         """Counts the # stones of the given color
         (1 for black, -1 for white, 0 for empty spaces)"""
-        count = 0
-        for y in range(self.n):
-            for x in range(self.n):
-                if self[x][y]==color:
-                    count += 1
-                if self[x][y]==-color:
-                    count -= 1
-        return count
+        return (bin(self.stones[BLACK]).count('1') - bin(self.stones[WHITE]).count('1')) * color
+
+    def board2actions(self, boardstr):
+        actions = []
+        n = self.n + 2
+        for m in re.finditer('1', boardstr.zfill(self.padded_size)):
+            action = self.padded_size - m.start()
+            action = action-n-int(action/n)*2
+            actions.append(action)
+        return actions
 
     def get_legal_moves(self, color):
-        """Returns all the legal moves for the given color.
+        """Returns 
+         the legal moves for the given color.
         (1 for black, -1 for white
         """
-        moves = set()  # stores the legal moves.
-        disboard = ndimage.generic_filter(self.regular_stones(), shikatu_filter, size=(3,3), mode='mirror')
-        legal = np.where(disboard == -1)
-        question = np.where(disboard == 0)
-        for i in range(len(legal[0])):
-            moves.add((legal[0][i], legal[1][i]))
-        if len(question[0]) > 0:
-            check_board = self.getCopy()
-        for i in range(len(question[0])):
-            x = question[0][i]
-            y = question[1][i]
-            # check kou
-            check_board.stones = self.stones.copy()
-            check_board.execute_move((x, y), color)
-            suicide = check_board[x][y] == 0
-            kou = check_board.hash in self.histories
-            if not suicide and not kou:
-                moves.add((x, y))
-        # check_board = self.getCopy()
-        # # Get all empty locations
-        # for y in range(self.n):
-        #     for x in range(self.n):
-        #         if self[x][y] == 0:
-        #             # １方向でも空いてれば合法手
-
-        #             # check kou
-        #             check_board.stones = self.stones.copy()
-        #             check_board.execute_move((x, y), color)
-        #             suicide = check_board[x][y] == 0
-        #             kou = check_board.hash in self.histories
-        #             if not suicide and not kou:
-        #                 moves.add((x, y))
+        moves = set()
+        # スキップを除く
+        skip_mask = (1 << self.padded_size) - 1
+        board = self.stones[str(color)] & skip_mask
+        board_opp = self.stones[str(-color)] & skip_mask
+        both = board | board_opp
+        board_rev = ~board+(1<<self.padded_size)
+        both_rev = ~both+(1<<self.padded_size)
+        n = self.n + 2
+        # 周りが１つでも空ならOK
+        kuten = (both_rev & both_rev >> 1) | (both_rev & both_rev << 1) | (both_rev & both_rev >> n) | (both_rev & both_rev << n)
+        moves |= set(self.board2actions(bin(kuten)[2:]))
+        # 周りが全部同じ色の箇所をチェック
+        eye = (board_rev & board >> 1) & (board_rev & board << 1) & (board_rev & board >> n) & (board_rev & board << n)
+        # それ以外の空マスは実際に打ってみる
+        trial = both_rev & (~kuten)
+        trials = self.board2actions(bin(trial)[2:])
+        for action in trials:
+            b = self.getCopy()
+            b.execute_move(action, color)
+            if b[action] == 0:
+                # 打った石が消えれば自殺手
+                continue # 自殺は禁止
+            if self.has_stone(eye, action) == 1:
+                # 消えないけど自分の色で囲われていれば目
+                b2 = self.getCopy()
+                b2.execute_move(action, -color)
+                if b2[action] == 0:
+                    continue # playoutでは禁止手
+            if b.get_hash() in self.history['front']:
+                # 同一局面禁止
+                continue
+            moves.add(action)
         return list(moves)
 
     def has_legal_moves(self, color):
         moves = self.get_legal_moves(color)
-        return len(moves) > 0
+        return len(moves) != 0
     
-    def get_hash(self, s):
-        return int.from_bytes(hashlib.sha256(s).digest(), 'big')
+    def double_skipped(self):
+        board = self.stones['1']
+        board_opp = self.stones['-1']
+        return (board >> self.padded_size & 1) & (board_opp >> self.padded_size & 1) == 1
     
-    def execute_move(self, move, color):
+    def execute_move(self, action, color):
         """Perform the given move on the board
         """
-        (x,y) = move
-        
-        if x >= self.n: # pass
-            self.passCnt += 1
-            self.step += 1
-            self.hash = self.get_hash((self.stones+0).tostring() + bytes(f'pass{self.passCnt}', encoding='utf-8'))
-            self.hash_kifu = self.get_hash_kifu()
-            self.histories[self.hash] = True
-            return
-        self.passCnt = 0
-        self.last_move = move
-        if self[x][y] != 0:
-            print(move)
-            print(self.stones)
+        if self[action] != 0:
+            print('zero action')
+            print(action)
             print(self.get_legal_moves(color))
             print(self.get_legal_moves(-color))
-            print(self.hash)
-            print(self.hash_kifu)
-        assert self[x][y] == 0
-        assert color != 0
-        self[x][y] = color + 0
-        for d in self.__directions:
-            (dx, dy) = d
-            vx = x + dx
-            vy = y + dy
-            self.execute_shikatu(-color, vx+1, vy+1)
-        self.execute_shikatu(color, x+1, y+1)
-        self.hash =self.get_hash((self.stones+0).tostring())
-        self.hash_kifu = self.get_hash_kifu()
-        self.histories[self.hash] = True
+            print(self.stones['1'])
+            print(self.stones['-1'])
+            print(self.get_history_hash())
+        assert self[action] == 0
         self.step += 1
-
-    def get_hash_kifu(self):
-        #return self.hash_kifu ^ self.hash
-        return self.get_hash((str(self.hash) + str(self.histories)).encode())
-    
-    def execute_shikatu(self, color, x, y):
-        checked = {}
-        def checker(x, y):
-            cnt = 0
-            for d in self.__directions:
-                (dx, dy) = d
-                vx = x + dx
-                vy = y + dy
-                tcolor = self.stones[vx][vy]
-                if tcolor == 0:
-                    cnt += 1
-                elif tcolor == color and not (f'{x}{y}' in checked):
-                    checked[f'{x}{y}'] = True
-                    cnt += checker(vx, vy)
-            return cnt
-        def killer(x, y):
-            self.stones[x][y] = 0
-            for d in self.__directions:
-                (dx, dy) = d
-                vx = x + dx
-                vy = y + dy
-                tcolor = self.stones[vx][vy]
-                if tcolor == color:
-                    killer(vx, vy)
-        if self.stones[x][y] == color:
-            kuten = checker(x, y)
-            if kuten == 0:
-                killer(x, y)
-                    
+        n = self.n + 2
+        me = str(color)
+        you = str(-color)
+        if action == self.size:
+            # pass
+            self.stones[me] |= 1 << self.padded_size
+            self.pass_cnt += 1
+            self.save_hash()
+            return
+        # 石を打つ
+        slide = n + 1 + action + int(action / self.n) * 2
+        skip_mask = (1 << self.padded_size) - 1 # スキップを除くため
+        hit_stone = 1 << slide
+        self.stones[me] |= hit_stone
+        self.stones[me] &= skip_mask # clear pass
+        self.pass_cnt = 0
         
+        board = self.stones[me] & skip_mask
+        board_opp = self.stones[you] & skip_mask
+
+        mask = 1 << slide + 1 | 1 << slide - 1 | 1 << slide + n | 1 << slide - n # 上下左右
+        same_cnt = bin(board & ~board_opp & mask).count('1') # 周囲の同じ色の数
+        opp_cnt = bin(board_opp & ~board & mask).count('1') # 周囲の相手色の数
+        new_ren = hit_stone
+        new_neighbor = ~board & mask
+        suspects = [] # 死亡容疑者リスト
+        # 同色チェック
+        if same_cnt > 0:
+            # groupをくっつける
+            for ren, neighbor in list(self.groups[me].items()):
+                if bin(ren & mask).count('1') > 0:
+                    new_ren |= ren
+                    new_neighbor |= neighbor
+                    del self.groups[me][ren]
+        # 新しい連を追加
+        self.groups[me][new_ren] = new_neighbor
+        # 相手色チェック
+        if opp_cnt > 0:
+            # 周囲のgroupを調べる
+            for ren, neighbor in list(self.groups[you].items()):
+                if bin(ren & mask).count('1') > 0:
+                    # 死活チェックリストに加える
+                    suspects.append({'ren':ren, 'neighbor': neighbor, 'player': you})
+        # 打った石は死活チェックリストの最後に加える
+        suspects.append({'ren': new_ren, 'neighbor': new_neighbor, 'player': me})
+        # 空点が無ければ死亡
+        for row in suspects:
+            board = self.stones[me] & skip_mask
+            board_opp = self.stones[you] & skip_mask
+            if bin(row['neighbor'] & ~board & ~board_opp).count('1') == 0:
+                self.stones[row['player']] -= row['ren']
+                #self.stones[row['player']] |= BANPEI[str(self.n)]
+                del self.groups[row['player']][row['ren']]
+        self.save_hash()
+    
+    def get_hash(self, color = 1):
+        return int(self.stones[str(color)]) << (self.padded_size + 1) | self.stones[str(-color)]
+    
+    def save_hash(self):
+        h_front = self.get_hash()
+        h_back = self.get_hash(-1)
+        # self.cache_hash['front'] ^= int.from_bytes(hashlib.sha256(hex(h_front).encode()).digest(), 'big')
+        # self.cache_hash['back'] ^= int.from_bytes(hashlib.sha256(hex(h_back).encode()).digest(), 'big')
+        self.history['front'].add(h_front)
+        self.history['back'].add(h_back)
+        self.cache_hash['front'] = str(sorted(self.history['front']))
+        self.cache_hash['back'] = str(sorted(self.history['back']))
+    
+    def get_history_hash(self):
+        return self.cache_hash['front']
