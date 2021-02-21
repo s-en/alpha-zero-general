@@ -37,25 +37,29 @@ class JyungoGame(Game):
         # if player takes action on board, return next (board,player)
         # action must be a valid move
         b = board.getCopy()
-        b.execute_move(action, player)
+        #if action == self.n*self.n: # pass
+        #    b.passCnt += 1
+        #    return (b, -player)
+        #b.passCnt = 0
+        move = (int(action/self.n), action%self.n)
+        b.execute_move(move, player)
+        b.step += 1
         return (b, -player)
 
     def getValidMoves(self, board, player):
         # return a fixed size binary vector
         valids = [0]*self.getActionSize()
-        #if board.pass_cnt < 2:
-        #    valids[-1] = 1 # pass
         legalMoves = board.get_legal_moves(player)
-        for i in legalMoves:
-            valids[i] = 1
-        if len(legalMoves) == 0 and board.double_skipped() == False:
-            valids[-1] = 1
+        if len(legalMoves) == 0:
+            valids[-1] = 1 # pass
+        for x, y in legalMoves:
+            valids[self.n*x+y]=1
         return np.array(valids)
 
     def getGameEnded(self, board, player):
         # return 0 if not ended, 1 if player 1 won, -1 if player 1 lost
         # player = 1
-        if board.double_skipped() == False:
+        if board.passCnt < 2:
             if board.has_legal_moves(player):
                 return 0
             if board.has_legal_moves(-player):
@@ -68,16 +72,18 @@ class JyungoGame(Game):
         # return state if player==1, else return -state if player==-1
         b = board.getCopy()
         if player != b.player:
-            b.lpayer = player
-            b.stones['1'], b.stones['-1'] = b.stones['-1'], b.stones['1']
-            b.groups['1'], b.groups['-1'] = b.groups['-1'], b.groups['1']
-            b.history['front'], b.history['back'] = b.history['back'], b.history['front']
-            b.cache_hash['front'], b.cache_hash['back'] = b.cache_hash['back'], b.cache_hash['front']
+            b.player = player
+            b.stones = (b.stones * -1) + 0
+            np.place(b.stones, b.stones == -3, 3)
+            b.histories['1'], b.histories['-1'] = b.histories['-1'], b.histories['1']
+            if b.passCnt == 0:
+                b.hash = b.get_hash((b.stones+0).tostring())
+            else:
+                b.hash = b.get_hash((b.stones+0).tostring() + bytes(f'pass{b.passCnt}', encoding='utf-8'))
         return b
 
     def getSymmetries(self, board, pi):
         return [(board,pi)]
-        # return [(board,pi)]
         # mirror, rotational
         # assert(len(pi) == self.n**2+1)  # 1 for pass
         # pi_board = np.reshape(pi[:-1], (self.n, self.n))
@@ -94,20 +100,22 @@ class JyungoGame(Game):
         # return l
 
     def stringRepresentation(self, board):
-        return board.get_history_hash()
+        return board.get_hash_kifu()
 
     def stringRepresentationReadable(self, board):
-        return board.get_history_hash
+        board_s = "".join(self.square_content[square] for row in board for square in row)
+        return board_s
 
     def getScore(self, board, player):
         return board.countDiff(player)
 
     @staticmethod
     def display(board):
-        n = board.n
-        print(board.get_history_hash())
+        n = len(board[0])
         print(board.get_legal_moves(1))
         print(board.get_legal_moves(-1))
+        print(board.get_hash_kifu())
+        #print(board.histories)
         print("   ", end="")
         for y in range(n):
             print(y, end=" ")
@@ -116,16 +124,8 @@ class JyungoGame(Game):
         for y in range(n):
             print(y, "|", end="")    # print the row #
             for x in range(n):
-                action = y*n + x
-                slide = board.n + 3 + action + int(action / board.n) * 2
-                black = (board.stones['1'] >> slide) & 1
-                white = (board.stones['-1'] >> slide) & 1
-                if black == 1:
-                    print('o', end=" ")
-                elif white == 1:
-                    print('x', end=" ")
-                else:
-                    print('-', end=" ")
+                piece = board[y][x]    # get the piece to print
+                print(JyungoGame.square_content[piece], end=" ")
             print("|")
 
         print("-----------------------")
