@@ -4,11 +4,8 @@ import coloredlogs
 
 from Coach import Coach
 from jyungo.JyungoGame import JyungoGame as Game
-from jyungo.pytorch.NNet import NNetWrapper as nn
+from jyungo.tensorflow.NNet import NNetWrapper as nn
 from utils import *
-
-import sys
-sys.setrecursionlimit(3000)
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +22,7 @@ args = dotdict({
     'cpuct': 1,
 
     'checkpoint': './temp/',
-    'load_model': True,
+    'load_model': False,
     'load_folder_file': ('./temp','best.pth.tar'),
     'numItersForTrainExamplesHistory': 20,
 })
