@@ -83,21 +83,21 @@ class JyungoGame(Game):
         return b
 
     def getSymmetries(self, board, pi):
-        return [(board,pi)]
+        # return [(board,pi)]
         # mirror, rotational
-        # assert(len(pi) == self.n**2+1)  # 1 for pass
-        # pi_board = np.reshape(pi[:-1], (self.n, self.n))
-        # l = []
-        # for i in range(1, 5):
-        #     for j in [True, False]:
-        #         newB = board.getCopy()
-        #         newB.stones = np.rot90(newB.stones, i)
-        #         newPi = np.rot90(pi_board, i)
-        #         if j:
-        #             newB = np.fliplr(newB) + 0
-        #             newPi = np.fliplr(newPi) + 0
-        #         l += [(newB, list(newPi.ravel()) + [pi[-1]])]
-        # return l
+        assert(len(pi) == self.n**2+1)  # 1 for pass
+        pi_board = np.reshape(pi[:-1], (self.n, self.n))
+        l = []
+        for i in range(1, 5):
+            for j in [True, False]:
+                newB = board.getCopy()
+                newB.stones = np.rot90(newB.stones, i)
+                newPi = np.rot90(pi_board, i)
+                if j:
+                    newB.stones = np.fliplr(newB.stones) + 0
+                    newPi = np.fliplr(newPi) + 0
+                l += [(newB, list(newPi.ravel()) + [pi[-1]])]
+        return l
 
     def stringRepresentation(self, board):
         return board.get_hash_kifu()
@@ -112,8 +112,8 @@ class JyungoGame(Game):
     @staticmethod
     def display(board):
         n = len(board[0])
-        print(board.get_legal_moves(1))
-        print(board.get_legal_moves(-1))
+        # print(board.get_legal_moves(1))
+        # print(board.get_legal_moves(-1))
         print(board.get_hash_kifu())
         #print(board.histories)
         print("   ", end="")

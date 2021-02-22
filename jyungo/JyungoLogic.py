@@ -9,7 +9,9 @@ def shikatu_filter(x):
         return -2 # 空マスでない
     if x[1] * x[3] * x[5] * x[7] == 0:
         return -1 # 周りが１つでも空
-    if abs(x[1] + x[3] + x[5] + x[7]) == 4:
+    if x[1] + x[3] + x[5] + x[7] == 4:
+        return 3 # 周り全部が同じ色
+    if x[1] + x[3] + x[5] + x[7] == -4:
         return 1 # 周り全部が同じ色
     return 0
 
@@ -111,7 +113,7 @@ class Board():
             y = question[1][i]
             check_board.stones = self.stones.copy()
             eye = False
-            if disboard[x][y] == 1 and check_board.stones[x+2][y+1] == color:
+            if disboard[x][y] == color + 2:
                 # 周辺が自分色で、相手色を打ってみて死ねば自分の目
                 check_board.execute_move((x, y), -color)
                 eye = check_board[x][y] == 0

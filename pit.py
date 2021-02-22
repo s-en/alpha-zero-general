@@ -12,9 +12,9 @@ use this script to play any two agents against each other, or play manually with
 any agent.
 """
 
-human_vs_cpu = True
+human_vs_cpu = False
 
-g = JyungoGame(3)
+g = JyungoGame(7)
 
 # all players
 rp = RandomPlayer(g).play
@@ -28,13 +28,13 @@ hp = HumanJyungoPlayer(g).play
 #args1 = dotdict({'numMCTSSims': 50, 'cpuct':1.0})
 #mcts1 = MCTS(g, n1, args1)
 #n1p = lambda x: np.argmax(mcts1.getActionProb(x, temp=0))
-n1p = hp#RandomPlayer(g).play
+n1p = rp#RandomPlayer(g).play
 
 if human_vs_cpu:
-    player2 = hp
+    player2 = rp
 else:
     n2 = NNet(g)
-    n2.load_checkpoint('./pretrained_models/othello/pytorch/', '8x8_100checkpoints_best.pth.tar')
+    n2.load_checkpoint('./temp/', 'best.pth.tar')
     args2 = dotdict({'numMCTSSims': 50, 'cpuct': 1.0})
     mcts2 = MCTS(g, n2, args2)
     n2p = lambda x: np.argmax(mcts2.getActionProb(x, temp=0))
