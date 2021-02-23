@@ -23,14 +23,14 @@ args = dotdict({
 
     'checkpoint': './temp/',
     'load_model': False,
-    'load_folder_file': ('./temp','best.pth.tar'),
+    'load_folder_file': ('./temp','checkpoint_8.pth.tar'),
     'numItersForTrainExamplesHistory': 20,
 })
 
 
 def main():
     log.info('Loading %s...', Game.__name__)
-    g = Game(7)
+    g = Game(5)
 
     log.info('Loading %s...', nn.__name__)
     nnet = nn(g)

@@ -21,8 +21,8 @@ class JyungoNNet():
         # Neural Net
         self.graph = tf.Graph()
         with self.graph.as_default(): 
-            self.input_boards = tf.placeholder(tf.float32, shape=[None, self.board_x, self.board_y])    # s: batch_size x board_x x board_y
-            self.dropout = tf.placeholder(tf.float32)
+            self.input_boards = tf.placeholder(tf.float32, shape=[None, self.board_x, self.board_y], name="input_boards")    # s: batch_size x board_x x board_y
+            self.dropout = tf.placeholder(tf.float32, name="dropout")
             self.isTraining = tf.placeholder(tf.bool, name="is_training")
 
             x_image = tf.reshape(self.input_boards, [-1, self.board_x, self.board_y, 1])                    # batch_size  x board_x x board_y x 1
@@ -33,9 +33,9 @@ class JyungoNNet():
             h_conv4_flat = tf.reshape(h_conv4, [-1, args.num_channels*(self.board_x-4)*(self.board_y-4)])
             s_fc1 = Dropout(Relu(BatchNormalization(Dense(h_conv4_flat, 1024, use_bias=False), axis=1, training=self.isTraining)), rate=self.dropout) # batch_size x 1024
             s_fc2 = Dropout(Relu(BatchNormalization(Dense(s_fc1, 512, use_bias=False), axis=1, training=self.isTraining)), rate=self.dropout)         # batch_size x 512
-            self.pi = Dense(s_fc2, self.action_size)                                                        # batch_size x self.action_size
-            self.prob = tf.nn.softmax(self.pi)
-            self.v = Tanh(Dense(s_fc2, 1))                                                               # batch_size x 1
+            self.pi = Dense(s_fc2, self.action_size, name="pi")                                                        # batch_size x self.action_size
+            self.prob = tf.nn.softmax(self.pi, name="prob")
+            self.v = Tanh(Dense(s_fc2, 1), name="v")                                                               # batch_size x 1
 
             self.calculate_loss()
 

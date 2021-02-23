@@ -17,7 +17,7 @@ args = dotdict({
     'dropout': 0.3,
     'epochs': 10,
     'batch_size': 64,
-    'num_channels': 128,
+    'num_channels': 64,
 })
 
 
@@ -26,6 +26,7 @@ class NNetWrapper(NeuralNet):
         self.nnet = onnet(game, args)
         self.board_x, self.board_y = game.getBoardSize()
         self.action_size = game.getActionSize()
+        self.cnt = 0
 
         self.sess = tf.Session(graph=self.nnet.graph)
         self.saver = None
@@ -91,6 +92,27 @@ class NNetWrapper(NeuralNet):
             self.saver = tf.train.Saver(self.nnet.graph.get_collection('variables'))
         with self.nnet.graph.as_default():
             self.saver.save(self.sess, filepath)
+            # tf.train.write_graph(self.sess.graph_def, folder, f'{filename}.pb', as_text=False)
+            # tf.train.write_graph(self.sess.graph_def, folder, f'{filename}.txt', as_text=True)
+            #print([node.name for node in self.sess.graph.as_graph_def().node])
+        # if filename == 'best.pth.tar':
+        #     model_dir='models'
+        #     self.cnt += 1
+        #     builder = tf.saved_model.builder.SavedModelBuilder(model_dir + '/' + str(self.cnt))
+        #     inputs = {
+        #         'input_boards': self.nnet.input_boards,
+        #         'dropout': self.nnet.dropout,
+        #         'is_training': self.nnet.isTraining
+        #     }
+        #     outputs = {
+        #         'prob': self.nnet.prob,
+        #         'v': self.nnet.v
+        #     }
+        #     signature = tf.saved_model.predict_signature_def(inputs=inputs, outputs=outputs)
+        #     builder.add_meta_graph_and_variables(sess=self.sess,
+        #         tags=[tf.saved_model.tag_constants.SERVING],
+        #         signature_def_map={'serving_default': signature})
+        #     builder.save()
 
     def load_checkpoint(self, folder='checkpoint', filename='checkpoint.pth.tar'):
         filepath = os.path.join(folder, filename)
