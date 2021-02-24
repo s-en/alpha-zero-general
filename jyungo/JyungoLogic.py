@@ -9,9 +9,10 @@ def shikatu_filter(x):
         return -2 # 空マスでない
     if x[1] * x[3] * x[5] * x[7] == 0:
         return -1 # 周りが１つでも空
-    if x[1] + x[3] + x[5] + x[7] == 4:
+    s = x[1] + x[3] + x[5] + x[7]
+    if s == 4:
         return 3 # 周り全部が同じ色
-    if x[1] + x[3] + x[5] + x[7] == -4:
+    if s == -4:
         return 1 # 周り全部が同じ色
     return 0
 
@@ -81,18 +82,18 @@ class Board():
         return self.stones[1:-1, 1:-1]
     
     def astype(self,t):
-        stones = self.stones[1:-1, 1:-1]
-        return stones.astype(t)
+        return self.regular_stones().astype(t)
 
     def countDiff(self, color):
         """Counts the # stones of the given color
         (1 for black, -1 for white, 0 for empty spaces)"""
         count = 0
+        stones = self.regular_stones()
         for y in range(self.n):
             for x in range(self.n):
-                if self[x][y]==color:
+                if stones[x][y]==color:
                     count += 1
-                if self[x][y]==-color:
+                if stones[x][y]==-color:
                     count -= 1
         return count
 
@@ -112,20 +113,24 @@ class Board():
             x = question[0][i]
             y = question[1][i]
             check_board.stones = self.stones.copy()
-            eye = False
             if disboard[x][y] == color + 2:
                 # 周辺が自分色で、相手色を打ってみて死ねば自分の目
                 check_board.execute_move((x, y), -color)
                 eye = check_board[x][y] == 0
+                if eye:
+                    continue
                 check_board.stones = self.stones.copy()
             # 同じ色を打ってみる
             check_board.execute_move((x, y), color)
             # 死ねば自殺
             suicide = check_board[x][y] == 0
+            if suicide:
+                continue
             # 同一局面になればコウ
             kou = check_board.hash in self.histories['1']
-            if not eye and not suicide and not kou:
-                moves.add((x, y))
+            if kou:
+                continue
+            moves.add((x, y))
         return list(moves)
 
     def has_legal_moves(self, color):
@@ -142,9 +147,9 @@ class Board():
         
         if x >= self.n: # pass
             self.passCnt += 1
-            self.hash = self.get_hash((self.stones+0).tostring() + bytes(f'pass{self.passCnt}', encoding='utf-8'))
+            self.hash = self.get_hash((self.regular_stones()+0).tostring() + bytes(f'pass{self.passCnt}', encoding='utf-8'))
             self.histories['1'].add(self.hash)
-            self.histories['-1'].add(self.get_hash((self.stones*-1).tostring()))
+            self.histories['-1'].add(self.get_hash((self.regular_stones()*-1+0).tostring()))
             return
         self.passCnt = 0
         self.last_move = move
@@ -163,9 +168,9 @@ class Board():
             vy = y + dy
             self.execute_shikatu(-color, vx+1, vy+1)
         self.execute_shikatu(color, x+1, y+1)
-        self.hash =self.get_hash((self.stones+0).tostring())
+        self.hash =self.get_hash((self.regular_stones()+0).tostring())
         self.histories['1'].add(self.hash)
-        self.histories['-1'].add(self.get_hash((self.stones*-1).tostring()))
+        self.histories['-1'].add(self.get_hash((self.regular_stones()*-1+0).tostring()))
 
     def get_hash_kifu(self):
         return self.get_hash((str(self.hash) + str(sorted(self.histories['1']))).encode())

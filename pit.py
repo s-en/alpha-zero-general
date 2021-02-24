@@ -2,7 +2,7 @@ import Arena
 from MCTS import MCTS
 from jyungo.JyungoGame import JyungoGame
 from jyungo.JyungoPlayers import *
-from jyungo.pytorch.NNet import NNetWrapper as NNet
+from jyungo.tensorflow.NNet import NNetWrapper as NNet
 
 import numpy as np
 from utils import *
@@ -14,7 +14,7 @@ any agent.
 
 human_vs_cpu = False
 
-g = JyungoGame(7)
+g = JyungoGame(5)
 
 # all players
 rp = RandomPlayer(g).play
@@ -31,10 +31,10 @@ hp = HumanJyungoPlayer(g).play
 n1p = rp#RandomPlayer(g).play
 
 if human_vs_cpu:
-    player2 = rp
+    player2 = hp
 else:
     n2 = NNet(g)
-    n2.load_checkpoint('./temp/', 'best.pth.tar')
+    n2.load_checkpoint('./temp', 'best.pth.tar')
     args2 = dotdict({'numMCTSSims': 50, 'cpuct': 1.0})
     mcts2 = MCTS(g, n2, args2)
     n2p = lambda x: np.argmax(mcts2.getActionProb(x, temp=0))

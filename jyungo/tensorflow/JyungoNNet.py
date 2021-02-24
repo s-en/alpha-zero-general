@@ -62,8 +62,8 @@ class ResNet():
         # Neural Net
         self.graph = tf.Graph()
         with self.graph.as_default(): 
-            self.input_boards = tf.placeholder(tf.float32, shape=[None, self.board_x, self.board_y])    # s: batch_size x board_x x board_y
-            self.dropout = tf.placeholder(tf.float32)
+            self.input_boards = tf.placeholder(tf.float32, shape=[None, self.board_x, self.board_y], name="input_boards")    # s: batch_size x board_x x board_y
+            self.dropout = tf.placeholder(tf.float32, name="dropout")
             self.isTraining = tf.placeholder(tf.bool, name="is_training")
 
             x_image = tf.reshape(self.input_boards, [-1, self.board_x, self.board_y, 1])                    # batch_size  x board_x x board_y x 1
@@ -96,7 +96,7 @@ class ResNet():
             policy = tf.nn.relu(policy)
             policy = tf.layers.flatten(policy, name='p_flatten')
             self.pi = tf.layers.dense(policy, self.action_size)
-            self.prob = tf.nn.softmax(self.pi)
+            self.prob = tf.nn.softmax(self.pi, name="prob")
 
             value = tf.layers.conv2d(residual_tower, 1,kernel_size=(1, 1), strides=(1, 1),name='v',padding='same',use_bias=False)
             value = tf.layers.batch_normalization(value, axis=3, name='bn_v', training=self.isTraining)
@@ -105,7 +105,7 @@ class ResNet():
             value = tf.layers.dense(value, units=256)
             value = tf.nn.relu(value)
             value = tf.layers.dense(value, 1)
-            self.v = tf.nn.tanh(value) 
+            self.v = tf.nn.tanh(value, name="v") 
                                                               
             self.calculate_loss()
 

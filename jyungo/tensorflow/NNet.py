@@ -10,13 +10,13 @@ from utils import *
 from NeuralNet import NeuralNet
 
 import tensorflow as tf
-from .JyungoNNet import JyungoNNet as onnet
+from .JyungoNNet import ResNet as onnet
 
 args = dotdict({
     'lr': 0.001,
     'dropout': 0.3,
-    'epochs': 10,
-    'batch_size': 64,
+    'epochs': 20,
+    'batch_size': 1024,
     'num_channels': 64,
 })
 

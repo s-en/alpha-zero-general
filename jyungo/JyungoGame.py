@@ -77,9 +77,9 @@ class JyungoGame(Game):
             np.place(b.stones, b.stones == -3, 3)
             b.histories['1'], b.histories['-1'] = b.histories['-1'], b.histories['1']
             if b.passCnt == 0:
-                b.hash = b.get_hash((b.stones+0).tostring())
+                b.hash = b.get_hash((b.regular_stones()+0).tostring())
             else:
-                b.hash = b.get_hash((b.stones+0).tostring() + bytes(f'pass{b.passCnt}', encoding='utf-8'))
+                b.hash = b.get_hash((b.regular_stones()+0).tostring() + bytes(f'pass{b.passCnt}', encoding='utf-8'))
         return b
 
     def getSymmetries(self, board, pi):
