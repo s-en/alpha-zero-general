@@ -3,6 +3,7 @@ import hashlib
 from scipy import ndimage
 
 HASH_BOARD = {}
+legal_moves_cache = {}
 
 def shikatu_filter(x):
     if x[4] != 0:
@@ -25,22 +26,6 @@ class Board():
         "Set up initial board configuration."
 
         self.n = n
-        if not n in HASH_BOARD:
-            HASH_BOARD[n] = [[], []]
-            for p in range(2):
-                HASH_BOARD[n][p] = [0]*(self.n*self.n+1)
-                HASH_BOARD[n][p][-1] = int.from_bytes(hashlib.sha256(f'pass{p}'.encode()).digest(), 'big')
-                cnt = 0
-                for x in range(self.n):
-                    for y in range(self.n):
-                        addr = str(x) + str(y)
-                        hashv = int.from_bytes(hashlib.sha256(addr.encode()).digest(), 'big')
-                        HASH_BOARD[n][p][cnt] = hashv
-                        cnt += 1
-        # Create the empty board array.
-        #self.stones = [None]*self.n
-        #for i in range(self.n):
-            #self.stones[i] = [0]*self.n
         if stones is None:
             self.stones = np.zeros([self.n+2, self.n+2])
         else:
@@ -87,20 +72,15 @@ class Board():
     def countDiff(self, color):
         """Counts the # stones of the given color
         (1 for black, -1 for white, 0 for empty spaces)"""
-        count = 0
-        stones = self.regular_stones()
-        for y in range(self.n):
-            for x in range(self.n):
-                if stones[x][y]==color:
-                    count += 1
-                if stones[x][y]==-color:
-                    count -= 1
-        return count
+        return np.sum(self.regular_stones()) * color
 
     def get_legal_moves(self, color):
         """Returns all the legal moves for the given color.
         (1 for black, -1 for white
         """
+        cache_name = hex(self.get_hash_kifu()) + str(color)
+        if cache_name in legal_moves_cache:
+            return legal_moves_cache[cache_name]
         moves = set()  # stores the legal moves.
         disboard = ndimage.generic_filter(self.regular_stones(), shikatu_filter, size=(3,3), mode='mirror')
         legal = np.where(disboard == -1)
@@ -131,7 +111,9 @@ class Board():
             if kou:
                 continue
             moves.add((x, y))
-        return list(moves)
+        ans = list(moves)
+        legal_moves_cache[cache_name] = ans
+        return ans
 
     def has_legal_moves(self, color):
         moves = self.get_legal_moves(color)

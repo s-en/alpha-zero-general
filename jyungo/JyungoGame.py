@@ -60,6 +60,12 @@ class JyungoGame(Game):
         # return 0 if not ended, 1 if player 1 won, -1 if player 1 lost
         # player = 1
         if board.passCnt < 2:
+            diff = board.countDiff(player)
+            maxcount = board.n**2 - 8 # この数を超えたら必勝
+            if diff >= maxcount:
+                return 1
+            if diff <= -maxcount:
+                return -1
             if board.has_legal_moves(player):
                 return 0
             if board.has_legal_moves(-player):
