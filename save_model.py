@@ -41,7 +41,7 @@ def main(argv=None):
     nnet.load_checkpoint('temp', 'best.pth.tar')
 
     # savedModel形式で保存
-    shutil.rmtree('./saved_model', ignore_errors=True)
+    shutil.rmtree('./saved_model', ignore_errors=False)
     with nnet.nnet.graph.as_default():
         builder = tf.saved_model.builder.SavedModelBuilder('./saved_model')
         inputs = {
@@ -64,7 +64,7 @@ def main(argv=None):
     output_filename = 'frozen_model.pb'
     output_graph_filename = os.path.join(saved_model_dir, output_filename)
     initializer_nodes = ''
-    output_node_names = 'prob'
+    output_node_names = 'prob,v_1'
 
     freeze_graph.freeze_graph(input_saved_model_dir=saved_model_dir,
         output_graph=output_graph_filename,
@@ -109,8 +109,7 @@ def main(argv=None):
 
     # この後tensorflowjs_converterでtfjs形式に変換
     # conda activate tf1
-    # tensorflowjs_converter --input_format=tf_saved_model --output_node_names=prob C:\Users\sen\Documents\GitHub\alpha-zero-general\saved_model C:\Users\sen\Documents\GitHub\alpha-zero-general\js_model
-    # tensorflowjs_converter --input_format=tf_frozen_model --output_node_names=prob C:\Users\sen\Documents\GitHub\alpha-zero-general\saved_model\frozen_model.pb C:\Users\sen\Documents\GitHub\alpha-zero-general\js_model --quantize_float8
+    # tensorflowjs_converter --input_format=tf_frozen_model --output_node_names=prob,v_1 C:\Users\sen\Documents\GitHub\alpha-zero-general\saved_model\frozen_model.pb C:\Users\sen\Documents\GitHub\alpha-zero-general\js_model --quantize_float16
 
     # tf1環境 python3.6
     # pip install tensorflow==1.15

@@ -59,8 +59,8 @@ class JyungoGame(Game):
     def getGameEnded(self, board, player):
         # return 0 if not ended, 1 if player 1 won, -1 if player 1 lost
         # player = 1
+        diff = board.countDiff(player)
         if board.passCnt < 2:
-            diff = board.countDiff(player)
             maxcount = board.n**2 - 8 # この数を超えたら必勝
             if diff >= maxcount:
                 return 1
@@ -70,15 +70,17 @@ class JyungoGame(Game):
                 return 0
             if board.has_legal_moves(-player):
                 return 0
-        if board.countDiff(player) > 0:
+        if diff > 0:
             return 1
         return -1
+        # if board.regular_stones()[2][2] != 0:
+        #     return board.regular_stones()[2][2]*player
+        # return 0
 
     def getCanonicalForm(self, board, player):
         # return state if player==1, else return -state if player==-1
         b = board.getCopy()
-        if player != b.player:
-            b.player = player
+        if player == -1:
             b.stones = (b.stones * -1) + 0
             np.place(b.stones, b.stones == -3, 3)
             b.histories['1'], b.histories['-1'] = b.histories['-1'], b.histories['1']
@@ -118,9 +120,10 @@ class JyungoGame(Game):
     @staticmethod
     def display(board):
         n = len(board[0])
-        # print(board.get_legal_moves(1))
-        # print(board.get_legal_moves(-1))
-        print(board.get_hash_kifu())
+        print(board.get_legal_moves(1))
+        print(board.get_legal_moves(-1))
+        print(f'pass: {board.passCnt}')
+        #print(board.get_hash_kifu())
         #print(board.histories)
         print("   ", end="")
         for y in range(n):
